@@ -1,0 +1,11 @@
+# Default ignored files
+/workspace.xml
+/.idea
+.idea
+logs
+/logs
+/target
+/tomcat.8085
+./manifest.yml
+manifest.yml
+AsyncCalculator.iml
