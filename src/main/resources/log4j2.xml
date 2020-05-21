@@ -22,7 +22,7 @@
         </RollingFile>
     </Appenders>
     <Loggers>
-        <Root level="all">
+        <Root level="error">
             <AppenderRef ref="Console"/>
             <AppenderRef ref="rollingFile"/>
         </Root>

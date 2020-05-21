@@ -25,24 +25,34 @@ public class MySQLStorageImpl implements StorageInterface {
     private static final String SQL_DELETE_EXPRESSION_WITH_ID = "DELETE FROM expressions WHERE id = ?;";
     private static final String SQL_SET_CALCULATED_TRUE_BY_ID = "UPDATE expressions SET calculated=true WHERE id = ?;";
     private static final String SQL_SET_ANSWER_BY_ID = "UPDATE expressions SET answer= ? WHERE id = ?;";
-    private static final String SQL_GET_STATUS_BY_ID = "SELECT * FROM expressions WHERE id = ?;";
+    private static final String SQL_GET_EXPRESSION_BY_ID = "SELECT * FROM expressions WHERE id = ?;";
+    private static final String SQL_GET_ID_OF_INSERTED_EXPRESSION = "SELECT * FROM expressions WHERE expression=? ORDER BY id DESC LIMIT 1";
 
     public MySQLStorageImpl() {
 
     }
 
     @Override
-    public void saveExpression(Expression expression) throws StorageException {
+    public int saveExpression(Expression expression) throws StorageException {
         logger.debug("Connecting to database...");
         try (Connection connection = getConnection();
              PreparedStatement statement = getPreparedStatement(SQL_SAVE_EXPRESSION, connection)) {
             logger.debug("Connected to database! Saving expression:" + expression);
             statement.setString(1, expression.getExpression());
             statement.execute();
+            try( PreparedStatement getIdStatement = getPreparedStatement(SQL_GET_ID_OF_INSERTED_EXPRESSION, connection)){
+                getIdStatement.setString(1,expression.getExpression());
+                ResultSet rs = getIdStatement.executeQuery();
+                if(rs.next()){
+                    logger.debug("Successfully saved expression: " + expression);
+                    return rs.getInt(1);
+                }
+            }
             logger.debug("Successfully saved expression: " + expression);
         } catch (SQLException | ClassNotFoundException e) {
             throw new StorageException(e.getMessage(), e);
         }
+        return -1;
     }
 
     @Override
@@ -90,6 +100,50 @@ public class MySQLStorageImpl implements StorageInterface {
         return expressions;
     }
 
+    @Override
+    public Expression getExpressionByID(int id) throws StorageException {
+        logger.debug("Connecting to database...");
+        try (Connection connection = getConnection();
+             PreparedStatement statement = getPreparedStatement(SQL_GET_EXPRESSION_BY_ID, connection)) {
+            logger.debug("Connected to database! And trying to get expression with id:" + id);
+            statement.setInt(1, id);
+            ResultSet rs = statement.executeQuery();
+            if (rs.next()) {
+                Expression expression = new Expression(rs.getInt(1),rs.getString(2),rs.getDouble(3),rs.getBoolean(4));
+                logger.debug("Expression " + expression);
+                return expression;
+            } else {
+                logger.debug("Expression is not existing");
+            }
+        } catch (SQLException | ClassNotFoundException e) {
+            throw new StorageException(e.getMessage(), e);
+        }
+        return null;
+    }
+
+    @Override
+    public void deleteInvalidExpressions()  {
+        Calculator calculator = new Calculator();
+        try {
+            List<Expression> allExpressions = getExpressions();
+            for (Expression expression : allExpressions) {
+                try {
+                    calculator.calculate(expression.getExpression());
+                }catch (UnsupportedOperationException e){
+                    logger.debug("Deleting expression with id: "+expression.getId());
+                    try {
+                        deleteExpressionById(expression.getId());
+                    }catch (StorageException exception){
+                        logger.error(e.getMessage(),e);
+                    }
+                }
+            }
+        }catch (StorageException e){
+            logger.error(e.getMessage(),e);
+        }
+
+    }
+
 
     @Override
     public void deleteExpressionById(int id) throws StorageException {
@@ -122,7 +176,7 @@ public class MySQLStorageImpl implements StorageInterface {
     public boolean getStatusOfExpression(int id) throws StorageException {
         logger.debug("Connecting to database...");
         try (Connection connection = getConnection();
-             PreparedStatement statement = getPreparedStatement(SQL_GET_STATUS_BY_ID, connection)) {
+             PreparedStatement statement = getPreparedStatement(SQL_GET_EXPRESSION_BY_ID, connection)) {
             logger.debug("Connected to database! And trying to get expression with id:" + id);
             statement.setInt(1, id);
             ResultSet rs = statement.executeQuery();
@@ -132,8 +186,6 @@ public class MySQLStorageImpl implements StorageInterface {
             } else {
                 logger.debug("Expression is not calculated");
             }
-
-
         } catch (SQLException | ClassNotFoundException e) {
             throw new StorageException(e.getMessage(), e);
         }
@@ -157,12 +209,14 @@ public class MySQLStorageImpl implements StorageInterface {
             try (Connection connection = getConnection();
                  PreparedStatement statementSetAnswer = getPreparedStatement(SQL_SET_ANSWER_BY_ID, connection);
                  PreparedStatement statementSetStatus = getPreparedStatement(SQL_SET_CALCULATED_TRUE_BY_ID, connection)) {
-                statementSetAnswer.setDouble(1, calculator.calculate(expression.getExpression()));
+                double answer = calculator.calculate(expression.getExpression());
+                statementSetAnswer.setDouble(1, answer);
                 statementSetAnswer.setInt(2, expression.getId());
                 statementSetAnswer.executeUpdate();
                 statementSetStatus.setInt(1, expression.getId());
                 statementSetStatus.executeUpdate();
-            } catch (SQLException | ClassNotFoundException e) {
+
+            }catch(UnsupportedOperationException | SQLException | ClassNotFoundException e){
                 throw new StorageException(e.getMessage(), e);
             }
         }

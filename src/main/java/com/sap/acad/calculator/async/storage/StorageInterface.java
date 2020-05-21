@@ -7,7 +7,7 @@ import java.util.List;
 
 public interface StorageInterface{
 
-    void saveExpression(Expression expression) throws StorageException;
+    int saveExpression(Expression expression) throws StorageException;
 
     List<Expression> getExpressions() throws StorageException;
 
@@ -20,4 +20,8 @@ public interface StorageInterface{
     void calculateNotCalculatedExpressions() throws StorageException;
 
     List<Expression> getNotCalculatedExpressions() throws StorageException;
+
+    Expression getExpressionByID(int id) throws StorageException;
+
+    void deleteInvalidExpressions() throws StorageException;
 }

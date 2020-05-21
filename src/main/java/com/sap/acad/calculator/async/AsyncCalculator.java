@@ -1,5 +1,6 @@
 package com.sap.acad.calculator.async;
 
+import com.mysql.cj.xdevapi.JsonArray;
 import com.sap.acad.calculator.async.exceptions.StorageException;
 import com.sap.acad.calculator.async.models.Expression;
 import com.sap.acad.calculator.async.storage.StorageInterface;
@@ -28,9 +29,28 @@ public class AsyncCalculator extends HttpServlet {
     private StorageInterface storage = new MySQLStorageImpl();
 
     @GET
+    @Path("/all")
     public Response getHistory() {
         JSONObject json = getJSONObjectFromExpressionArray();
         return okRequestGetHistoryGET(json);
+    }
+
+    @GET
+    public Response getExpressionByID(@QueryParam("id") Integer id){
+        if (id == null || id.toString().length() == 0) {
+            return noContentExpressionNotFound();
+        }
+        try {
+            Expression expression =  storage.getExpressionByID(id);
+            if(expression!= null){
+                return okCalculatedExpression(expression);
+            }
+            return invalidExpressionResponse();
+        } catch (StorageException e) {
+            logger.error("Couldn't connect to storage");
+            logger.error(e.getMessage(), e);
+        }
+        return noContentExpressionNotFound();
     }
 
     @GET
@@ -41,9 +61,13 @@ public class AsyncCalculator extends HttpServlet {
         }
         try {
             boolean status =  storage.getStatusOfExpression(id);
-            if(status)
-                return calculatedResponseToGetStatus();
+            if(status){
 
+                return calculatedResponseToGetStatus();
+            }
+            if(storage.getExpressionByID(id) == null){
+                return invalidExpressionResponse();
+            }
         } catch (StorageException e) {
             logger.error("Couldn't connect to storage");
             logger.error(e.getMessage(), e);
@@ -55,11 +79,12 @@ public class AsyncCalculator extends HttpServlet {
     @POST
     public Response saveExpression(@QueryParam("expression") String expression) {
         if (expression == null || expression.trim().length() == 0) {
-            return invalidExpressionResponsePOST();
+            return invalidExpressionResponse();
         }
         try {
-            storage.saveExpression(new Expression(expression));
-            return correctExpressionResponsePOST();
+            int id  = storage.saveExpression(new Expression(expression));
+            if(id != -1)
+                return correctExpressionResponsePOST(id);
         }catch (StorageException exception) {
             logger.error("Couldn't connect to storage");
             logger.error(exception.getMessage(), exception);
@@ -82,6 +107,21 @@ public class AsyncCalculator extends HttpServlet {
         return noContentFoundToDeleteExpression();
     }
 
+    public Response okCalculatedExpression(Expression expression) {
+        JSONObject json = new JSONObject();
+        json.put(JSON_EXPRESSION_ID, expression.getId());
+        json.put(JSON_EXPRESSION_EXPRESSION, expression.getExpression());
+        json.put(JSON_EXPRESSION_ANSWER, expression.getAnswer());
+        json.put(JSON_EXPRESSION_CALCULATED,expression.isCalculated());
+
+        return Response.status(Response.Status.OK)
+                .header("Access-Control-Allow-Origin", "*")
+                .header("Access-Control-Allow-Methods", "GET")
+                .allow()
+                .type(MediaType.APPLICATION_JSON)
+                .entity(json.toString())
+                .build();
+    }
 
     public Response noContentFoundToDeleteExpression() {
         return Response.status(Response.Status.NO_CONTENT)
@@ -120,6 +160,14 @@ public class AsyncCalculator extends HttpServlet {
                 .build();
     }
 
+    public Response noContentExpressionNotFound() {
+        return Response.status(Response.Status.NO_CONTENT)
+                .header("Access-Control-Allow-Origin", "*")
+                .header("Access-Control-Allow-Methods", "GET")
+                .allow()
+                .entity("")
+                .build();
+    }
 
     public Response okRequestGetHistoryGET(JSONObject json) {
         return Response.status(Response.Status.OK)
@@ -140,17 +188,21 @@ public class AsyncCalculator extends HttpServlet {
                 .build();
     }
 
-    public Response correctExpressionResponsePOST() {
+    public Response correctExpressionResponsePOST(int id) {
+        JSONObject json = new JSONObject();
+        json.put("id",id);
+
         return Response.status(Response.Status.CREATED)
                 .header("Access-Control-Allow-Origin", "*")
                 .header("Access-Control-Allow-Methods", "POST")
                 .allow()
-                .entity("Saved Expression in storage Correctly")
+                .type(MediaType.APPLICATION_JSON)
+                .entity(json.toString())
                 .build();
     }
 
-    public Response invalidExpressionResponsePOST() {
-        return Response.status(Response.Status.BAD_REQUEST)
+    public Response invalidExpressionResponse() {
+        return Response.status(Response.Status.NO_CONTENT)
                 .header("Access-Control-Allow-Origin", "*")
                 .header("Access-Control-Allow-Methods", "POST")
                 .allow()

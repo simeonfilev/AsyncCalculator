@@ -18,7 +18,8 @@ public class AsyncStorageBackgroundJob implements ServletContextListener {
     @Override
     public void contextInitialized(ServletContextEvent event) {
         scheduler = Executors.newSingleThreadScheduledExecutor();
-        scheduler.scheduleAtFixedRate(new CalculateNotCalculatedExpressionsJob(storage), 0, 3, TimeUnit.SECONDS);
+        scheduler.scheduleAtFixedRate(new CalculateNotCalculatedExpressionsJob(storage), 0, 300, TimeUnit.MILLISECONDS);
+        scheduler.scheduleAtFixedRate(new DeleteInvalidExpressionsJob(storage), 0,1,TimeUnit.SECONDS);
     }
 
     @Override

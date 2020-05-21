@@ -67,8 +67,9 @@ public class AsyncCalculatorServletTest extends JerseyTest {
         Calculator calculator = new Calculator();
         StorageInterface storage = new StorageInterface() {
             @Override
-            public void saveExpression(Expression expression) {
+            public int saveExpression(Expression expression) {
                 expressions.add(expression);
+                return expression.getId();
             }
 
             @Override
@@ -110,6 +111,16 @@ public class AsyncCalculatorServletTest extends JerseyTest {
                     }
                 }
                 return notCalculatedExpressions;
+            }
+
+            @Override
+            public Expression getExpressionByID(int id) throws StorageException {
+                return null;
+            }
+
+            @Override
+            public void deleteInvalidExpressions() throws StorageException {
+
             }
         };
 
