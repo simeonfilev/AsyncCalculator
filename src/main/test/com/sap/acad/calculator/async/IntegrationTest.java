@@ -6,10 +6,9 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 
+import com.google.gson.Gson;
 import com.sap.acad.calculator.Calculator;
 import org.apache.catalina.startup.Tomcat;
-import org.json.JSONException;
-import org.json.JSONObject;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -45,12 +44,17 @@ public class IntegrationTest {
 
     }
     private boolean isValidJSON(String test) {
+        Gson gson = new Gson();
         try {
-            new JSONObject(test);
-        } catch (JSONException ex) {
+            gson.fromJson(test, Object.class);
+            Object jsonObjType = gson.fromJson(test, Object.class).getClass();
+            if(jsonObjType.equals(String.class)){
+                return false;
+            }
+            return true;
+        } catch (com.google.gson.JsonSyntaxException ex) {
             return false;
         }
-        return true;
     }
     @Test
     public void verifyRESTServiceCorrectness() throws IOException, InterruptedException {
@@ -66,10 +70,8 @@ public class IntegrationTest {
                 HttpResponse.BodyHandlers.ofString());
         String json = response.body();
         Assertions.assertTrue(isValidJSON(json), "Does not return valid JSON");
-        Double expectedAnswerToExpression = calculator.calculate(expression);
-        JSONObject jsonObj = new JSONObject(json);
-        Assertions.assertEquals(expectedAnswerToExpression, jsonObj.getDouble("answer"));
-        Assertions.assertEquals(200, response.statusCode());
+
+        Assertions.assertEquals(201, response.statusCode());
         Assertions.assertEquals(MediaType.APPLICATION_JSON,response.headers().firstValue("content-type").get());
     }
 }

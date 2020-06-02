@@ -1,10 +1,16 @@
 package com.sap.acad.calculator.async.models;
 
+import java.util.List;
+import java.util.Stack;
+
 public class Expression {
     private int id;
     private String expression;
     private Double answer;
     private boolean calculated;
+
+    private static final List<Character> validSymbols = List.of('*', '/', '+', '-', '(', ')');
+    private static final List<Character> mathOperators = List.of('*', '/', '+', '-');
 
     public Expression() {
     }
@@ -71,5 +77,60 @@ public class Expression {
                 ", answer=" + answer +
                 ", calculated=" + calculated +
                 '}';
+    }
+    private boolean parenthesesAreNotMatching(String expression)  {
+        Stack<Character> parenthesesStack = new Stack<>();
+        for (int index = 0; index < expression.length(); index++) {
+            char currentChar = expression.charAt(index);
+            if (currentChar == '(') {
+                parenthesesStack.push(currentChar);
+            }
+            if (currentChar == ')') {
+                if (parenthesesStack.isEmpty() || parenthesesStack.peek() != '(') {
+                    return true;
+                }
+                parenthesesStack.pop();
+            }
+        }
+        return !parenthesesStack.isEmpty();
+    }
+
+    private boolean isMathOperator(char c){
+        return mathOperators.contains(c);
+    }
+
+    private boolean containsMultipleMathOperators(String expression){
+        for(int index =0; index<expression.length()-1;index++){
+            char currentChar = expression.charAt(index);
+            char nextChar = expression.charAt(index+1);
+            if(isMathOperator(currentChar) && currentChar == nextChar){
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean startsWithASignOtherThanMinus(String expression){
+        return isMathOperator(expression.charAt(0)) && expression.charAt(0) != '-';
+    }
+
+    private boolean containsIllegalSymbols(String expression) {
+        for (int index = 0; index < expression.length(); index++) {
+            char currentChar = expression.charAt(index);
+            if (!(Character.isDigit(currentChar) || validSymbols.contains(currentChar))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean containsIllegalArguments(String expression) {
+        return containsIllegalSymbols(expression) || parenthesesAreNotMatching(expression)
+                || containsMultipleMathOperators(expression) || expression.equals("")
+                || startsWithASignOtherThanMinus(expression);
+    }
+
+    public boolean isValidExpression(){
+        return !containsIllegalArguments(this.getExpression());
     }
 }

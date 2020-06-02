@@ -23,5 +23,4 @@ public interface StorageInterface{
 
     Expression getExpressionByID(int id) throws StorageException;
 
-    void deleteInvalidExpressions() throws StorageException;
 }
