@@ -2,6 +2,7 @@ package com.sap.acad.calculator.async;
 
 import org.glassfish.jersey.server.ResourceConfig;
 
+import javax.servlet.annotation.HttpConstraint;
 import javax.ws.rs.ApplicationPath;
 
 @ApplicationPath("calculator")

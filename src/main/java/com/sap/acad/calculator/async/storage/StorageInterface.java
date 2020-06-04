@@ -9,6 +9,8 @@ public interface StorageInterface{
 
     int saveExpression(Expression expression) throws StorageException;
 
+    List<Expression> getExpressions(String username) throws StorageException;
+
     List<Expression> getExpressions() throws StorageException;
 
     void deleteExpressionById(int id) throws StorageException;

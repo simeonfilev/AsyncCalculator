@@ -14,6 +14,7 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
 
 import static java.sql.DriverManager.getConnection;
@@ -30,6 +31,18 @@ public class StorageTest {
             public int saveExpression(Expression expression) {
                 expressions.add(expression);
                 return expression.getId();
+            }
+
+            @Override
+            public List<Expression> getExpressions(String username) {
+                List<Expression> filteredExpressions = new ArrayList<>();
+
+                for(Expression e : expressions){
+                    if(e.getUsername().equals(username)){
+                        filteredExpressions.add(e);
+                    }
+                }
+                return filteredExpressions;
             }
 
             @Override

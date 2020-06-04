@@ -5,13 +5,21 @@ import com.sap.acad.calculator.async.exceptions.StorageException;
 import com.sap.acad.calculator.async.models.Expression;
 import com.sap.acad.calculator.async.storage.StorageInterface;
 import com.sap.acad.calculator.async.storage.mysql.MySQLStorageImpl;
+import com.sap.cloud.security.xsuaa.jwt.DecodedJwt;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import javax.servlet.ServletException;
+import javax.servlet.annotation.HttpConstraint;
+import javax.servlet.annotation.ServletSecurity;
 import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import java.io.IOException;
+import java.util.Enumeration;
 import java.util.List;
 
 @Path("/expressions")
@@ -22,8 +30,8 @@ public class AsyncCalculator extends HttpServlet {
 
     @GET
     @Path("/all")
-    public Response getHistory() {
-        String json = getJSONObjectFromExpressionArray();
+    public Response getHistory(@QueryParam("username") String username) {
+        String json = getJSONObjectFromExpressionArray(username);
         return buildResponse(200,json);
     }
 
@@ -44,6 +52,7 @@ public class AsyncCalculator extends HttpServlet {
         }
         return buildResponse(204,"");
     }
+
 
     @GET
     @Path("/status")
@@ -68,12 +77,12 @@ public class AsyncCalculator extends HttpServlet {
 
 
     @POST
-    public Response saveExpression(@QueryParam("expression") String expressionString) {
+    public Response saveExpression(@QueryParam("expression") String expressionString,@QueryParam("username") String username) {
         if (expressionString == null || expressionString.trim().length() == 0) {
             return buildResponse(404,"");
         }
         try {
-            Expression expression = new Expression(expressionString);
+            Expression expression = new Expression(expressionString,username);
             if(expression.isValidExpression()){
                 int id  = storage.saveExpression(expression);
                 if(id != -1)
@@ -121,11 +130,11 @@ public class AsyncCalculator extends HttpServlet {
         return buildResponse(201,jsonString);
     }
 
-    public String getJSONObjectFromExpressionArray() {
+    public String getJSONObjectFromExpressionArray(String username) {
         List<Expression> expressions;
         Gson gson = new Gson();
         try {
-            expressions = storage.getExpressions();
+            expressions = storage.getExpressions(username);
             return gson.toJson(expressions);
         } catch (StorageException exception) {
             logger.error(exception.getMessage(), exception);

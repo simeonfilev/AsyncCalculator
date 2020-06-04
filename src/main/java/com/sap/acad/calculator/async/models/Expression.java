@@ -8,6 +8,7 @@ public class Expression {
     private String expression;
     private Double answer;
     private boolean calculated;
+    private String username;
 
     private static final List<Character> validSymbols = List.of('*', '/', '+', '-', '(', ')');
     private static final List<Character> mathOperators = List.of('*', '/', '+', '-');
@@ -30,11 +31,24 @@ public class Expression {
         this.answer = answer;
     }
 
+    public Expression(String expression, String username) {
+        this.expression = expression;
+        this.username = username;
+    }
+
     public Expression(int id, String expression, Double answer, boolean calculated) {
         this.id = id;
         this.expression = expression;
         this.answer = answer;
         this.calculated = calculated;
+    }
+
+    public Expression(int id, String expression, Double answer, boolean calculated, String username) {
+        this.id = id;
+        this.expression = expression;
+        this.answer = answer;
+        this.calculated = calculated;
+        this.username = username;
     }
 
     public String getExpression() {
@@ -67,6 +81,10 @@ public class Expression {
 
     public void setCalculated(boolean calculated) {
         this.calculated = calculated;
+    }
+
+    public String getUsername() {
+        return username;
     }
 
     @Override
