@@ -2,123 +2,120 @@ package com.sap.acad.calculator.async;
 
 import com.google.gson.Gson;
 import com.sap.acad.calculator.async.exceptions.StorageException;
+import com.sap.acad.calculator.async.annotations.Loggable;
 import com.sap.acad.calculator.async.models.Expression;
 import com.sap.acad.calculator.async.storage.StorageInterface;
 import com.sap.acad.calculator.async.storage.mysql.MySQLStorageImpl;
-import com.sap.cloud.security.xsuaa.jwt.DecodedJwt;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import javax.servlet.ServletException;
-import javax.servlet.annotation.HttpConstraint;
-import javax.servlet.annotation.ServletSecurity;
 import javax.servlet.http.HttpServlet;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-import java.io.IOException;
-import java.util.Enumeration;
 import java.util.List;
+
 
 @Path("/expressions")
 public class AsyncCalculator extends HttpServlet {
 
-    private static final Logger logger = LogManager.getLogger(AsyncCalculator.class);
     private StorageInterface storage = new MySQLStorageImpl();
+    private static final Logger logger = LogManager.getLogger(AsyncCalculator.class);
 
     @GET
     @Path("/all")
+    @Loggable
     public Response getHistory(@QueryParam("username") String username) {
         String json = getJSONObjectFromExpressionArray(username);
-        return buildResponse(200,json);
+        return buildResponse(200, json);
     }
 
     @GET
-    public Response getExpressionByID(@QueryParam("id") Integer id){
+    @Loggable
+    public Response getExpressionByID(@QueryParam("id") Integer id) {
         if (id == null || id.toString().length() == 0) {
-            return buildResponse(204,"");
+            return buildResponse(204, "");
         }
         try {
-            Expression expression =  storage.getExpressionByID(id);
-            if(expression!= null){
+            Expression expression = storage.getExpressionByID(id);
+            if (expression != null) {
                 return okCalculatedExpression(expression);
             }
-            return buildResponse(404,"");
+            return buildResponse(404, "");
         } catch (StorageException e) {
             logger.error("Couldn't connect to storage");
             logger.error(e.getMessage(), e);
         }
-        return buildResponse(204,"");
+        return buildResponse(204, "");
     }
 
 
     @GET
     @Path("/status")
-    public Response getIsCalculated(@QueryParam("id") Integer id){
+    public Response getIsCalculated(@QueryParam("id") Integer id) {
         if (id == null || id.toString().length() == 0) {
-            return buildResponse(204,"");
+            return buildResponse(204, "");
         }
         try {
-            boolean status =  storage.getStatusOfExpression(id);
-            if(status){
-                return buildResponse(200,"");
+            boolean status = storage.getStatusOfExpression(id);
+            if (status) {
+                return buildResponse(200, "");
             }
-            if(storage.getExpressionByID(id) == null){
-                return buildResponse(404,"");
+            if (storage.getExpressionByID(id) == null) {
+                return buildResponse(404, "");
             }
         } catch (StorageException e) {
             logger.error("Couldn't connect to storage");
             logger.error(e.getMessage(), e);
         }
-        return buildResponse(404,"");
+        return buildResponse(404, "");
     }
 
 
     @POST
-    public Response saveExpression(@QueryParam("expression") String expressionString,@QueryParam("username") String username) {
+    @Loggable
+    public Response saveExpression(@QueryParam("expression") String expressionString, @QueryParam("username") String username) {
         if (expressionString == null || expressionString.trim().length() == 0) {
-            return buildResponse(404,"");
+            return buildResponse(404, "");
         }
         try {
-            Expression expression = new Expression(expressionString,username);
-            if(expression.isValidExpression()){
-                int id  = storage.saveExpression(expression);
-                if(id != -1)
+            Expression expression = new Expression(expressionString, username);
+            if (expression.isValidExpression()) {
+                int id = storage.saveExpression(expression);
+                if (id != -1)
                     return correctExpressionResponsePOST(id);
-            }else{
-                return buildResponse(400,"");
+            } else {
+                return buildResponse(400, "");
             }
 
-        }catch (StorageException exception) {
+        } catch (StorageException exception) {
             logger.error("Couldn't connect to storage");
             logger.error(exception.getMessage(), exception);
         }
-        return buildResponse(204,"");
+        return buildResponse(204, "");
     }
 
     @DELETE
     public Response deleteExpression(@QueryParam("id") Integer id) {
         if (id == null || id.toString().length() == 0) {
-            return buildResponse(204,"");
+            return buildResponse(204, "");
         }
         try {
             storage.deleteExpressionById(id);
-            return buildResponse(200,"");
+            return buildResponse(200, "");
         } catch (StorageException e) {
             logger.error("Couldn't connect to storage");
             logger.error(e.getMessage(), e);
         }
-        return buildResponse(204,"");
+        return buildResponse(204, "");
     }
 
     public Response okCalculatedExpression(Expression expression) {
         String jsonString = new Gson().toJson(expression);
-        return buildResponse(200,jsonString);
+        return buildResponse(200, jsonString);
     }
 
-    public Response buildResponse(int code,String response){
+    public Response buildResponse(int code, String response) {
         return Response.status(code)
                 .type(MediaType.APPLICATION_JSON)
                 .entity(response)
@@ -127,7 +124,7 @@ public class AsyncCalculator extends HttpServlet {
 
     public Response correctExpressionResponsePOST(int id) {
         String jsonString = new Gson().toJson(id);
-        return buildResponse(201,jsonString);
+        return buildResponse(201, jsonString);
     }
 
     public String getJSONObjectFromExpressionArray(String username) {
