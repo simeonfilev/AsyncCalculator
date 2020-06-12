@@ -2,6 +2,8 @@ package com.sap.acad.calculator.async;
 
 import com.sap.acad.calculator.Calculator;
 import com.sap.acad.calculator.async.exceptions.StorageException;
+import com.sap.acad.calculator.async.jobs.AsyncStorageBackgroundJob;
+import com.sap.acad.calculator.async.jobs.CalculateNotCalculatedExpressionsJob;
 import com.sap.acad.calculator.async.models.Expression;
 import com.sap.acad.calculator.async.storage.StorageInterface;
 import com.sap.acad.calculator.async.storage.mysql.MySQLStorageImpl;
@@ -138,11 +140,12 @@ public class StorageTest {
     @Test
     public void isCalculatingNotCalculatedExpressions() throws StorageException, InterruptedException {
         MySQLStorageImpl storage = new MySQLStorageImpl();
-        Expression expression = new Expression("2+5");
+        CalculateNotCalculatedExpressionsJob jobToTest = new CalculateNotCalculatedExpressionsJob(storage);
+        Expression expression = new Expression("11+4", "testUsername");
         int id = storage.saveExpression(expression);
-        Thread.sleep(150); // wait 1 sec for job to finish (CalculateNotCalculatedExpressions JOB : every 100 mil seconds)
-        Expression newExpression = storage.getExpressionByID(id);
-        Assertions.assertTrue(newExpression.isCalculated());
+        jobToTest.run();
+        boolean isCalculated = storage.getStatusOfExpression(id);
+        Assertions.assertTrue(isCalculated);
         storage.deleteExpressionById(id);
     }
 
@@ -159,13 +162,13 @@ public class StorageTest {
         Mockito.when(spyStorage.getConnection()).thenReturn(c);
 
         // SET UP Table
-        c.prepareStatement("CREATE TABLE expressions(id INTEGER IDENTITY PRIMARY KEY,expression  varchar(255),answer double, calculated boolean); ").execute();
+        c.prepareStatement("CREATE TABLE expressions(id INTEGER IDENTITY PRIMARY KEY,expression  varchar(255),answer double, calculated boolean, username varchar(255)); ").execute();
 
         Mockito.when(spyStorage.getConnection()).thenReturn(DriverManager.getConnection(url));
         Assertions.assertEquals(spyStorage.getExpressions().size(), 0);
 
         Mockito.when(spyStorage.getConnection()).thenReturn(DriverManager.getConnection(url));
-        spyStorage.saveExpression(new Expression("15+5"));
+        spyStorage.saveExpression(new Expression("15+5","test"));
 
         Mockito.when(spyStorage.getConnection()).thenReturn(DriverManager.getConnection(url));
         boolean isCalculated = spyStorage.getStatusOfExpression(1);
