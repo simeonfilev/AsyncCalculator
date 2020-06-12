@@ -144,7 +144,6 @@ public class StorageTest {
         Expression expression = new Expression("11+4", "testUsername");
         int id = storage.saveExpression(expression);
         jobToTest.run();
-        Thread.sleep(1000); // wait 1 sec for job to finish (CalculateNotCalculatedExpressions JOB : every 100 mil seconds)
         boolean isCalculated = storage.getStatusOfExpression(id);
         Assertions.assertTrue(isCalculated);
         storage.deleteExpressionById(id);
